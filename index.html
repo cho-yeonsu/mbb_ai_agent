@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MBB AI Insight Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Consulting Insights Dashboard</title>
+
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gray-50">
-  <!-- 기존 대시보드 HTML -->
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <header class="mb-12 text-center">
       <h1 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight">
         McKinsey, BCG & Bain 최신 인사이트
       </h1>
-      <p class="mt-2 text-lg text-gray-500">글로벌 TOP 컨설팅 펌의 최신 아티클을 확인하세요.</p>
+      <p class="mt-2 text-lg text-gray-500">
+        글로벌 TOP 컨설팅 펌의 최신 아티클을 확인하세요.
+      </p>
       <div class="mt-8 max-w-lg mx-auto">
         <form id="search-form" class="relative">
           <input type="search" id="search-input" placeholder="키워드로 인사이트 검색..."
@@ -29,74 +31,79 @@
         </form>
       </div>
     </header>
+
     <main>
       <div id="loading-indicator" class="flex justify-center items-center py-20">
         <div class="loader"></div>
       </div>
-      <div id="article-grid"
-           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+      <div id="article-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
     </main>
   </div>
 
-  <!-- 챗봇이 삽입될 컨테이너 -->
-  <div id="chatkit-container"></div>
-
-  <!-- 페이지 스크립트 -->
+  <!-- 대시보드 JS (네가 쓰던 코드) -->
   <script src="script.js" defer></script>
 
-<!-- 💬 Chatbot Floating Button -->
-<button id="mbb-launcher"
-  style="position:fixed;right:24px;bottom:24px;background:#2563eb;color:white;
-         border:none;padding:12px 16px;border-radius:9999px;font-weight:500;
-         box-shadow:0 8px 20px rgba(0,0,0,.25);cursor:pointer;z-index:9999;">
-  💬 MBB AI 챗봇
-</button>
+  <!-- 💬 간단 챗봇 UI (wf 기반, /api/ask 호출) -->
+  <button id="mbb-launcher"
+    style="position:fixed;right:24px;bottom:24px;background:#2563eb;color:#fff;
+           border:none;padding:12px 16px;border-radius:9999px;font-weight:600;
+           box-shadow:0 8px 22px rgba(0,0,0,.25);cursor:pointer;z-index:9999;">
+    💬 MBB AI 챗봇
+  </button>
 
-<div id="mbb-modal"
-  style="display:none;position:fixed;right:24px;bottom:80px;width:420px;max-width:92vw;
-         height:560px;max-height:70vh;background:white;border-radius:16px;
-         border:1px solid #e5e7eb;box-shadow:0 20px 40px rgba(0,0,0,.2);overflow:hidden;
-         z-index:9999;">
-  <div style="padding:10px 16px;border-bottom:1px solid #eee;font-weight:600;">
-    MBB AI 인사이트
+  <div id="mbb-modal"
+    style="display:none;position:fixed;right:24px;bottom:84px;width:420px;max-width:92vw;
+           height:560px;max-height:70vh;background:#fff;border:1px solid #e5e7eb;
+           border-radius:16px;box-shadow:0 20px 40px rgba(0,0,0,.18);overflow:hidden;z-index:9999;">
+    <div style="padding:10px 16px;border-bottom:1px solid #eee;font-weight:700">MBB AI 인사이트</div>
+    <div id="mbb-log" style="padding:12px;height:420px;overflow:auto;font-size:14px;line-height:1.55"></div>
+    <form id="mbb-form" style="display:flex;gap:8px;padding:12px;border-top:1px solid #eee">
+      <input id="mbb-input" placeholder="질문을 입력하세요"
+             style="flex:1;border:1px solid #ddd;border-radius:10px;padding:10px" />
+      <button style="background:#2563eb;color:#fff;border:none;border-radius:10px;padding:10px 14px">보내기</button>
+    </form>
   </div>
-  <div id="mbb-log" style="padding:12px;height:420px;overflow:auto;font-size:14px;"></div>
-  <form id="mbb-form" style="display:flex;gap:8px;padding:12px;border-top:1px solid #eee">
-    <input id="mbb-input" placeholder="질문을 입력하세요..." 
-           style="flex:1;border:1px solid #ddd;border-radius:10px;padding:10px">
-    <button style="background:#2563eb;color:white;border:none;border-radius:10px;padding:10px 14px">보내기</button>
-  </form>
-</div>
 
-<script>
-  const $launcher = document.getElementById("mbb-launcher");
-  const $modal = document.getElementById("mbb-modal");
-  const $form = document.getElementById("mbb-form");
-  const $input = document.getElementById("mbb-input");
-  const $log = document.getElementById("mbb-log");
+  <script>
+    const $launcher = document.getElementById("mbb-launcher");
+    const $modal = document.getElementById("mbb-modal");
+    const $form = document.getElementById("mbb-form");
+    const $input = document.getElementById("mbb-input");
+    const $log = document.getElementById("mbb-log");
 
-  $launcher.onclick = () => {
-    $modal.style.display = $modal.style.display === "none" ? "block" : "none";
-  };
+    $launcher.onclick = () => {
+      $modal.style.display = $modal.style.display === "none" ? "block" : "none";
+    };
 
-  $form.onsubmit = async (e) => {
-    e.preventDefault();
-    const text = $input.value.trim();
-    if (!text) return;
-    $log.innerHTML += `<div><b>나</b>: ${text}</div>`;
-    $input.value = "";
-    const res = await fetch("/api/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text }),
-    });
-    const data = await res.json();
-    const answer = data?.answer || "(응답 없음)";
-    $log.innerHTML += `<div style="margin-top:8px"><b>Agent</b>: ${answer}</div>`;
-    $log.scrollTop = $log.scrollHeight;
-  };
-</script>
+    $form.onsubmit = async (e) => {
+      e.preventDefault();
+      const text = $input.value.trim();
+      if (!text) return;
+      appendUser(text);
+      $input.value = "";
+      try {
+        const r = await fetch("/api/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || r.statusText);
+        appendAgent(data?.answer || "(응답 없음)");
+      } catch (err) {
+        appendAgent("⚠️ 오류: " + (err?.message || err));
+      }
+    };
 
+    function appendUser(t) {
+      $log.innerHTML += `<div><b>나</b>: ${escapeHtml(t)}</div>`;
+      $log.scrollTop = $log.scrollHeight;
+    }
+    function appendAgent(t) {
+      $log.innerHTML += `<div style="margin-top:8px"><b>Agent</b>:</div><div style="white-space:pre-wrap">${t}</div>`;
+      $log.scrollTop = $log.scrollHeight;
+    }
+    function escapeHtml(s){return s.replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));}
+  </script>
 </body>
 </html>
-
