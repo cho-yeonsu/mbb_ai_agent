@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MBB AI Insight Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>MBB AI Insight Dashboard</h1>
+  <p>이 페이지는 OpenAI Agent와 연결됩니다.</p>
+
+  <!-- ✅ ChatKit 임베드 코드 -->
+  <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js" async></script>
+  <script>
+    async function bootChat() {
+      const r = await fetch("/api/chatkit/session", { method: "POST" });
+      const { client_secret } = await r.json();
+      window.ChatKit.mount({
+        client_secret,
+        theme: "light",
+        position: "bottom-right",
+        launcherTitle: "💬 MBB AI 챗봇"
+      });
+    }
+    window.addEventListener("load", () => {
+      if (window.ChatKit) bootChat();
+      else {
+        const iv = setInterval(() => {
+          if (window.ChatKit) { clearInterval(iv); bootChat(); }
+        }, 200);
+      }
+    });
+  </script>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
