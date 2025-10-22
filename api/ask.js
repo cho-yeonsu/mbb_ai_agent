@@ -1,6 +1,6 @@
 import { fileSearchTool, Agent, Runner, withTrace } from "@openai/agents";
 
-export const config = { runtime: "nodejs18.x" };
+export const config = { runtime: "nodejs" };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const VS_ID = process.env.VS_ID;
