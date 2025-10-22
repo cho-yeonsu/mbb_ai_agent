@@ -1,139 +1,167 @@
-<script>
-  const $launcher = document.getElementById("mbb-launcher");
-  const $modal = document.getElementById("mbb-modal");
-  const $close = document.getElementById("mbb-close");
-  const $form = document.getElementById("mbb-form");
-  const $input = document.getElementById("mbb-input");
-  const $log = document.getElementById("mbb-log");
-  const $send = document.getElementById("mbb-send");
+const feeds = {
+    mckinsey: 'https://rss.app/feeds/v1.1/kxacNO6X4NoT7stN.json',
+    bcg: 'https://rss.app/feeds/v1.1/KenJwRZBjblSVKoh.json',
+    bain: 'https://rss.app/feeds/v1.1/kffB3aDpt3Sj8uUO.json'
+};
 
-  let thinkTimer = null;   // “생각중…” 애니메이션 타이머
+const sourceStyles = {
+    'McKinsey': 'bg-blue-100 text-blue-800',
+    'BCG': 'bg-green-100 text-green-800',
+    'Bain': 'bg-red-100 text-red-800'
+};
 
-  $launcher.onclick = () => { $modal.style.display = "block"; $input.focus(); };
-  $close.onclick = () => { $modal.style.display = "none"; };
+function transformArticle(item, source) {
+    return {
+        article_id: item.id,
+        source: source,
+        title: item.title,
+        link: item.url,
+        published_date: item.date_published,
+        summary: item.content_text || '요약 정보가 없습니다.',
+    };
+}
 
-  $form.onsubmit = async (e) => {
-    e.preventDefault();
-    const text = $input.value.trim();
-    if (!text) return;
+async function fetchAndProcessFeeds() {
+    const feedSources = [
+        { name: 'McKinsey', url: feeds.mckinsey },
+        { name: 'BCG', url: feeds.bcg },
+        { name: 'Bain', url: feeds.bain }
+    ];
 
-    appendUser(text);
-    $input.value = "";
-    setSending(true);
-
-    // “생각중…” + 추론 상자 표시(모의)
-    const $thinkRow = appendThinkingRow();
+    const fetchPromises = feedSources.map(async (source) => {
+        try {
+            const response = await fetch(source.url);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} for ${source.name}`);
+            }
+            const data = await response.json();
+            return {
+                sourceName: source.name,
+                items: data.items || []
+            };
+        } catch (error) {
+            console.warn(`Could not fetch or parse feed for ${source.name}:`, error.message);
+            return null;
+        }
+    });
 
     try {
-      const r = await fetch("/api/ask", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
-      });
+        const results = await Promise.all(fetchPromises);
 
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        const msg = data?.error || `HTTP ${r.status}`;
-        appendAgent("⚠️ 오류: " + msg);
-      } else {
-        // ③ [1] → <sup>[1]</sup> 치환 (링크 [text](url) 보존)
-        const html = toSuperscriptCitations(data?.answer || "(응답 없음)");
-        appendAgentHTML(html);
-      }
-    } catch (err) {
-      appendAgent("⚠️ 네트워크 오류: " + (err?.message || err));
-    } finally {
-      clearThinking($thinkRow);
-      setSending(false);
+        const allArticles = results
+            .filter(result => result !== null)
+            .flatMap(result =>
+                result.items.map(item => transformArticle(item, result.sourceName))
+            );
+
+        allArticles.sort((a, b) => new Date(b.published_date) - new Date(a.published_date));
+
+        return allArticles;
+
+    } catch (error) {
+        console.error("An unexpected error occurred while processing all feeds:", error);
+        return [];
     }
-  };
+}
 
-  function setSending(sending) {
-    $send.disabled = sending;
-    $send.textContent = sending ? "전송중..." : "보내기";
-  }
 
-  function appendUser(t) {
-    $log.insertAdjacentHTML("beforeend",
-      `<div><b>나</b>:</div>
-       <div class="bubble">${escapeHtml(t)}</div>`);
-    $log.scrollTop = $log.scrollHeight;
-  }
+function formatDate(dateString) {
+    if (!dateString) return '';
+    try {
+        return new Date(dateString).toLocaleDateString('ko-KR', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    } catch (e) {
+        return dateString;
+    }
+}
 
-  function appendAgent(t) {
-    $log.insertAdjacentHTML("beforeend",
-      `<div style="margin-top:10px"><b>Agent</b>:</div>
-       <div class="bubble">${escapeHtml(t)}</div>`);
-    $log.scrollTop = $log.scrollHeight;
-  }
+function createArticleCard(article) {
+    const card = document.createElement('div');
+    card.className = 'article-card p-6';
 
-  function appendAgentHTML(html) {
-    $log.insertAdjacentHTML("beforeend",
-      `<div style="margin-top:10px"><b>Agent</b>:</div>
-       <div class="bubble">${html}</div>`);
-    $log.scrollTop = $log.scrollHeight;
-  }
+    const sourceTagStyle = sourceStyles[article.source] || 'bg-gray-100 text-gray-800';
 
-  // === ① “생각중…” UI + 간단 추론 텍스트(모의 갱신) ===
-  function appendThinkingRow() {
-    const id = "think-" + Date.now();
-    $log.insertAdjacentHTML("beforeend", `
-      <div id="${id}" style="margin-top:8px">
-        <div class="thinking">생각중<span class="dots"></span></div>
-        <div id="${id}-box" style="display:none">
-          <div id="${id}-think" class="bubble" style="margin-top:6px">
-            <div id="${id}-thinkbox" ></div>
-          </div>
+    const truncatedSummary = article.summary.length > 150 
+        ? `${article.summary.substring(0, 150)}...` 
+        : article.summary;
+
+    card.innerHTML = `
+        <div class="flex-grow flex flex-col">
+            <div class="mb-4 flex items-center justify-between text-xs text-gray-500">
+                <span class="px-2 py-1 font-semibold rounded-full ${sourceTagStyle}">${article.source}</span>
+                <span>${formatDate(article.published_date)}</span>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-2 flex-grow">
+                <a href="${article.link}" target="_blank" rel="noopener noreferrer" class="hover:text-blue-700 transition-colors duration-200">
+                    ${article.title}
+                </a>
+            </h2>
+            <p class="text-sm text-gray-600 mb-6">${truncatedSummary}</p>
+            <div class="mt-auto">
+                <a href="${article.link}" target="_blank" rel="noopener noreferrer" class="read-more-btn">
+                    원문 보기
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </a>
+            </div>
         </div>
-      </div>
-    `);
-    $log.scrollTop = $log.scrollHeight;
+    `;
 
-    // 간단한 모의 “추론 로그”(실제 스트리밍 없으니 사용자 체감만)
-    const $boxWrap = document.getElementById(`${id}-box`);
-    const $box = document.getElementById(`${id}-thinkbox`);
-    let step = 0;
-    const hints = [
-      "질문 의도 파악 중…",
-      "관련 문서 검색 중…",
-      "핵심 수치/인용 정리 중…",
-      "각주 구성 중…"
-    ];
-    thinkTimer = setInterval(() => {
-      $boxWrap.style.display = "block";
-      $box.textContent = hints[Math.min(step, hints.length - 1)];
-      step++;
-    }, 900);
+    return card;
+}
 
-    return id;
-  }
+document.addEventListener('DOMContentLoaded', async () => {
+    const articleGrid = document.getElementById('article-grid');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
 
-  function clearThinking(id) {
-    if (thinkTimer) clearInterval(thinkTimer);
-    const el = document.getElementById(id);
-    if (el) el.remove();
-  }
+    let allArticles = [];
 
-  // === ③ [1]을 <sup>[1]</sup>로 치환 ===
-  function toSuperscriptCitations(md) {
-    // 1) 코드블록/인라인코드는 그대로 남김
-    // 2) [text](url) 링크는 건드리지 않음
-    // 3) 순수 [숫자]만 <sup>로 치환
-    //   - (?!\() : 바로 뒤에 ( 가 오면 링크이므로 제외
-    //   - (?<!\]) : 앞이 ] 이면 링크텍스트의 닫힘일 수 있으니 제외
-    const safe = md
-      .replace(/(?<!\])\[(\d+)\](?!\()/g, (_m, g1) => `<sup>[${g1}]</sup>`);
-    return safe
-      .replace(/&/g,'&amp;')
-      .replace(/</g,'&lt;')
-      .replace(/>/g,'&gt;')
-      // 위에서 escape하면 HTML이 보이므로, 위첨자만 다시 되살림
-      .replace(/&lt;sup&gt;\[(\d+)\]&lt;\/sup&gt;/g, '<sup>[$1]</sup>')
-      // 줄바꿈 보존
-      .replace(/\n/g, '<br/>');
-  }
+    const displayArticles = (articlesToDisplay) => {
+        articleGrid.innerHTML = '';
+        if (articlesToDisplay && articlesToDisplay.length > 0) {
+            articlesToDisplay.forEach(article => {
+                const card = createArticleCard(article);
+                articleGrid.appendChild(card);
+            });
+        } else {
+            if (searchInput.value.trim()) {
+                 articleGrid.innerHTML = `<p class="text-center col-span-full text-gray-500">"${searchInput.value}"에 대한 검색 결과가 없습니다.</p>`;
+            } else {
+                 articleGrid.innerHTML = '<p class="text-center col-span-full text-gray-500">인사이트를 불러오는 데 실패했습니다. 나중에 다시 시도해주세요.</p>';
+            }
+        }
+        lucide.createIcons();
+    };
 
-  function escapeHtml(s){
-    return s.replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
-  }
-</script>
+    const handleSearch = (event) => {
+        event.preventDefault();
+        const searchTerm = searchInput.value.trim().toLowerCase();
+
+        if (searchTerm === '') {
+            displayArticles(allArticles);
+            return;
+        }
+        
+        const filteredArticles = allArticles.filter(article => 
+            article.title.toLowerCase().includes(searchTerm) || 
+            article.summary.toLowerCase().includes(searchTerm)
+        );
+
+        displayArticles(filteredArticles);
+    };
+
+    searchForm.addEventListener('submit', handleSearch);
+    searchInput.addEventListener('input', (e) => {
+        if (e.target.value.trim() === '') {
+            displayArticles(allArticles);
+        }
+    });
+
+    allArticles = await fetchAndProcessFeeds();
+    loadingIndicator.style.display = 'none';
+    displayArticles(allArticles);
+});
