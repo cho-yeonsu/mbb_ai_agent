@@ -2,90 +2,71 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MBB AI Insight Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulting Insights Dashboard</title>
 
-  <!-- Tailwind (CDN) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- 기본 커스텀 스타일 -->
-  <link rel="stylesheet" href="/style.css" />
+  <!-- Tailwind + Fonts -->
+  <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
-<body class="bg-slate-50">
-  <header class="max-w-6xl mx-auto px-4 pt-8">
-    <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800">
-      MBB AI Insight Dashboard
-    </h1>
-    <p class="text-slate-600 mt-2">이 페이지는 OpenAI Agent와 연결됩니다.</p>
-  </header>
+<body class="bg-gray-50">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <header class="mb-12 text-center">
+      <h1
+        class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight"
+      >
+        McKinsey, BCG & Bain 최신 인사이트
+      </h1>
+      <p class="mt-2 text-lg text-gray-500">
+        글로벌 TOP 컨설팅 펌의 최신 아티클을 확인하세요.
+      </p>
+      <div class="mt-8 max-w-lg mx-auto">
+        <form id="search-form" class="relative">
+          <input
+            type="search"
+            id="search-input"
+            placeholder="키워드로 인사이트 검색..."
+            class="w-full pl-4 pr-12 py-3 text-base bg-white border border-gray-300 rounded-full shadow-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+          <button type="submit" class="search-btn">
+            <i data-lucide="search" class="w-5 h-5"></i>
+          </button>
+        </form>
+      </div>
+    </header>
 
-  <!-- 검색 영역 -->
-  <section class="max-w-6xl mx-auto px-4 mt-6">
-    <form id="search-form" class="relative">
-      <input
-        id="search-input"
-        type="search"
-        placeholder="키워드로 검색 (예: agentic, gen ai, banking)"
-        class="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-      />
-      <button type="submit" class="search-btn absolute right-2 top-1/2 -translate-y-1/2">
-        <i data-lucide="search" class="w-5 h-5"></i>
-      </button>
-    </form>
-  </section>
-
-  <!-- 로딩 인디케이터 -->
-  <div id="loading-indicator" class="max-w-6xl mx-auto px-4 mt-8 flex justify-center">
-    <div class="loader"></div>
+    <main>
+      <div id="loading-indicator" class="flex justify-center items-center py-20">
+        <div class="loader"></div>
+      </div>
+      <div id="article-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+    </main>
   </div>
 
-  <!-- 아티클 그리드 -->
-  <main class="max-w-6xl mx-auto px-4 mt-6 mb-16">
-    <div
-      id="article-grid"
-      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-    ></div>
-  </main>
+  <!-- JS 파일 -->
+  <script src="script.js" defer></script>
 
-  <!-- Lucide 아이콘 (CDN) -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- 사이트 로직 -->
-  <script src="/script.js" defer></script>
-
-  <!-- ✅ ChatKit 위젯 로드 -->
-  <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js" async></script>
+  <!-- ✅ ChatKit 임베드 -->
+  <script src="https://cdn.chatkit.site/chatkit-0.4.9.js"></script>
   <script>
-    async function bootChat() {
-      try {
-        const r = await fetch("/api/chatkit/session", { method: "POST" });
-        if (!r.ok) {
-          console.error("Token fetch failed:", await r.text());
-          return;
-        }
-        const { client_secret } = await r.json();
-        if (!client_secret) {
-          console.error("No client_secret");
-          return;
-        }
-        window.ChatKit.mount({
-          client_secret,
-          theme: "light",
-          position: "bottom-right",
-          launcherTitle: "💬 MBB AI 챗봇",
-        });
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    window.addEventListener("load", () => {
-      if (window.ChatKit) bootChat();
-      else {
-        const iv = setInterval(() => {
-          if (window.ChatKit) { clearInterval(iv); bootChat(); }
-        }, 150);
-      }
+    const agentId = "agnt_XXXXXX"; // Agent Builder에서 받은 ID
+    const apiKey = "sk-XXXXXX"; // 환경변수에서 관리 권장
+    ChatKit.mount({
+      agentId: agentId,
+      apiKey: apiKey,
+      target: "#chatkit-container", // 없으면 자동 생성
+      theme: "light",
+      title: "💬 MBB AI 인사이트 챗봇",
     });
   </script>
 </body>
 </html>
+
