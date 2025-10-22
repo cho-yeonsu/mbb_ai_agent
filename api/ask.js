@@ -3,8 +3,8 @@ import { fileSearchTool, Agent, Runner, withTrace } from "@openai/agents";
 export const config = { runtime: "nodejs18.x" };
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const VS_ID = process.env.VS_ID || "vs_68f70f751da08191807238724383c576";
-const WF_ID = process.env.WF_ID || "wf_68f6dc5efe30819095190d20fc02173808ddef39636f2dc5";
+const VS_ID = process.env.VS_ID;
+const WF_ID = process.env.WF_ID;
 
 const fileSearch = fileSearchTool([VS_ID]);
 
