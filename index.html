@@ -1,38 +1,91 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>MBB AI Insight Dashboard</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>MBB AI Insight Dashboard</h1>
-  <p>이 페이지는 OpenAI Agent와 연결됩니다.</p>
 
-  <!-- ✅ ChatKit 임베드 코드 -->
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 기본 커스텀 스타일 -->
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body class="bg-slate-50">
+  <header class="max-w-6xl mx-auto px-4 pt-8">
+    <h1 class="text-3xl md:text-4xl font-extrabold text-slate-800">
+      MBB AI Insight Dashboard
+    </h1>
+    <p class="text-slate-600 mt-2">이 페이지는 OpenAI Agent와 연결됩니다.</p>
+  </header>
+
+  <!-- 검색 영역 -->
+  <section class="max-w-6xl mx-auto px-4 mt-6">
+    <form id="search-form" class="relative">
+      <input
+        id="search-input"
+        type="search"
+        placeholder="키워드로 검색 (예: agentic, gen ai, banking)"
+        class="w-full pl-4 pr-12 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+      />
+      <button type="submit" class="search-btn absolute right-2 top-1/2 -translate-y-1/2">
+        <i data-lucide="search" class="w-5 h-5"></i>
+      </button>
+    </form>
+  </section>
+
+  <!-- 로딩 인디케이터 -->
+  <div id="loading-indicator" class="max-w-6xl mx-auto px-4 mt-8 flex justify-center">
+    <div class="loader"></div>
+  </div>
+
+  <!-- 아티클 그리드 -->
+  <main class="max-w-6xl mx-auto px-4 mt-6 mb-16">
+    <div
+      id="article-grid"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+    ></div>
+  </main>
+
+  <!-- Lucide 아이콘 (CDN) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- 사이트 로직 -->
+  <script src="/script.js" defer></script>
+
+  <!-- ✅ ChatKit 위젯 로드 -->
   <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js" async></script>
   <script>
     async function bootChat() {
-      const r = await fetch("/api/chatkit/session", { method: "POST" });
-      const { client_secret } = await r.json();
-      window.ChatKit.mount({
-        client_secret,
-        theme: "light",
-        position: "bottom-right",
-        launcherTitle: "💬 MBB AI 챗봇"
-      });
+      try {
+        const r = await fetch("/api/chatkit/session", { method: "POST" });
+        if (!r.ok) {
+          console.error("Token fetch failed:", await r.text());
+          return;
+        }
+        const { client_secret } = await r.json();
+        if (!client_secret) {
+          console.error("No client_secret");
+          return;
+        }
+        window.ChatKit.mount({
+          client_secret,
+          theme: "light",
+          position: "bottom-right",
+          launcherTitle: "💬 MBB AI 챗봇",
+        });
+      } catch (e) {
+        console.error(e);
+      }
     }
     window.addEventListener("load", () => {
       if (window.ChatKit) bootChat();
       else {
         const iv = setInterval(() => {
           if (window.ChatKit) { clearInterval(iv); bootChat(); }
-        }, 200);
+        }, 150);
       }
     });
   </script>
-
-  <script src="script.js" defer></script>
 </body>
 </html>
