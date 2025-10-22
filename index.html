@@ -1,72 +1,61 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Consulting Insights Dashboard</title>
-
-  <!-- Tailwind + Fonts -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MBB AI Insight Dashboard</title>
   <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap"
-    rel="stylesheet"
-  />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
-
 <body class="bg-gray-50">
+  <!-- 기존 대시보드 HTML -->
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <header class="mb-12 text-center">
-      <h1
-        class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight"
-      >
+      <h1 class="text-3xl md:text-4xl font-bold text-gray-800 tracking-tight">
         McKinsey, BCG & Bain 최신 인사이트
       </h1>
-      <p class="mt-2 text-lg text-gray-500">
-        글로벌 TOP 컨설팅 펌의 최신 아티클을 확인하세요.
-      </p>
+      <p class="mt-2 text-lg text-gray-500">글로벌 TOP 컨설팅 펌의 최신 아티클을 확인하세요.</p>
       <div class="mt-8 max-w-lg mx-auto">
         <form id="search-form" class="relative">
-          <input
-            type="search"
-            id="search-input"
-            placeholder="키워드로 인사이트 검색..."
-            class="w-full pl-4 pr-12 py-3 text-base bg-white border border-gray-300 rounded-full shadow-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <input type="search" id="search-input" placeholder="키워드로 인사이트 검색..."
+                 class="w-full pl-4 pr-12 py-3 text-base bg-white border border-gray-300 rounded-full shadow-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
           <button type="submit" class="search-btn">
             <i data-lucide="search" class="w-5 h-5"></i>
           </button>
         </form>
       </div>
     </header>
-
     <main>
       <div id="loading-indicator" class="flex justify-center items-center py-20">
         <div class="loader"></div>
       </div>
-      <div id="article-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+      <div id="article-grid"
+           class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"></div>
     </main>
   </div>
 
-  <!-- JS 파일 -->
+  <!-- 챗봇이 삽입될 컨테이너 -->
+  <div id="chatkit-container"></div>
+
+  <!-- 페이지 스크립트 -->
   <script src="script.js" defer></script>
 
-  <!-- ✅ ChatKit 임베드 -->
+  <!-- ChatKit 임베드 -->
   <script src="https://cdn.chatkit.site/chatkit-0.4.9.js"></script>
   <script>
-    const agentId = "agnt_XXXXXX"; // Agent Builder에서 받은 ID
-    const apiKey = "sk-XXXXXX"; // 환경변수에서 관리 권장
+    const agentId = 'agnt_여기에_발급받은_에이전트_ID';
+    const apiKey = 'sk_여기에_API_KEY';
     ChatKit.mount({
       agentId: agentId,
       apiKey: apiKey,
-      target: "#chatkit-container", // 없으면 자동 생성
-      theme: "light",
-      title: "💬 MBB AI 인사이트 챗봇",
+      target: '#chatkit-container',
+      theme: 'light',
+      title: '💬 MBB AI 인사이트 챗봇'
     });
   </script>
 </body>
 </html>
-
