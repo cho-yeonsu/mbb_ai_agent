@@ -47,8 +47,8 @@
   <!-- ChatKit 임베드 -->
   <script src="https://cdn.chatkit.site/chatkit-0.4.9.js"></script>
   <script>
-    const agentId = 'agnt_여기에_발급받은_에이전트_ID';
-    const apiKey = 'sk_여기에_API_KEY';
+    const apiKey = process.env.OPENAI_API_KEY;
+    const agentId = process.env.AGENT_ID;
     ChatKit.mount({
       agentId: agentId,
       apiKey: apiKey,
