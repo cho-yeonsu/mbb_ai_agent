@@ -14,13 +14,13 @@
 </head>
 <style>
   /* 채팅 패널 가독성 (이미 있으면 생략 가능) */
-  #mbb-modal { width: 560px; max-width: 96vw; height: 78vh; max-height: 86vh; z-index: 99999; }
+  #mbb-modal { width: 560px; max-width: 96vw; height: 80vh; max-height: 86vh; z-index: 99999; }
   #mbb-log   { height: calc(78vh - 140px); overflow: auto; font-size: 14px; line-height: 1.55; background: #fafafa; }
   #mbb-log .bubble { white-space: pre-wrap; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px 12px; overflow-wrap: anywhere; }
 
   /* “생각중…” 점프 애니메이션 */
   .thinking { display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 13px; }
-  .dots:after { content: '…'; animation: dots 1.5s steps(4, end) infinite; display: inline-block; width: 1ch; text-align: left; }
+  .dots:after { content: '…'; animation: dots 60s steps(4, end) infinite; display: inline-block; width: 1ch; text-align: left; }
   @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
 
   /* 단계별 진행 텍스트 */
@@ -238,4 +238,5 @@
 
 </body>
 </html>
+
 
