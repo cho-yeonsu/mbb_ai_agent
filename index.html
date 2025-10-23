@@ -161,6 +161,15 @@
     }
     $input.addEventListener('input', () => autogrow($input));
 
+    // ====== Enter → 전송 / Shift+Enter → 줄바꿈 ======
+    $input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();        // 기본 줄바꿈 막기
+        $form.requestSubmit();     // form 제출 (보내기)
+      }
+    });
+
+
     $form?.addEventListener("submit", async (e) => {
       e.preventDefault();
       const text = ($input.value || "").trim();
@@ -236,5 +245,6 @@
   </script>
 </body>
 </html>
+
 
 
