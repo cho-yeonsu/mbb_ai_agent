@@ -12,6 +12,28 @@
   <link rel="stylesheet" href="style.css" />
   <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+<style>
+  /* 채팅 패널 가독성 (이미 있으면 생략 가능) */
+  #mbb-modal { width: 560px; max-width: 96vw; height: 78vh; max-height: 86vh; z-index: 99999; }
+  #mbb-log   { height: calc(78vh - 140px); overflow: auto; font-size: 14px; line-height: 1.55; background: #fafafa; }
+  #mbb-log .bubble { white-space: pre-wrap; background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 10px 12px; overflow-wrap: anywhere; }
+
+  /* “생각중…” 점프 애니메이션 */
+  .thinking { display: flex; align-items: center; gap: 8px; color: #6b7280; font-size: 13px; }
+  .dots:after { content: '…'; animation: dots 1.5s steps(4, end) infinite; display: inline-block; width: 1ch; text-align: left; }
+  @keyframes dots { 0% { content: ''; } 33% { content: '.'; } 66% { content: '..'; } 100% { content: '...'; } }
+
+  /* 단계별 진행 텍스트 */
+  .stage-box { margin-top: 8px; padding: 8px 10px; background: #f0f7ff; border: 1px solid #dbeafe; border-radius: 8px; color: #1e3a8a; }
+  .stage-list { margin-top: 6px; list-style: none; padding: 0; }
+  .stage-list li { font-size: 12px; padding: 4px 0; display: flex; align-items: center; gap: 6px; color: #1e3a8a; }
+  .stage-list li .dot { width: 6px; height: 6px; border-radius: 999px; background: #93c5fd; display: inline-block; }
+  .stage-list li.current { font-weight: 700; color: #1d4ed8; }
+  .stage-list li.current .dot { background: #2563eb; }
+  .stage-list li.done { color: #065f46; }
+  .stage-list li.done .dot { background: #10b981; }
+</style>
+
 <body class="bg-gray-50">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <header class="mb-12 text-center">
@@ -64,46 +86,156 @@
     </form>
   </div>
 
-  <script>
-    const $launcher = document.getElementById("mbb-launcher");
-    const $modal = document.getElementById("mbb-modal");
-    const $form = document.getElementById("mbb-form");
-    const $input = document.getElementById("mbb-input");
-    const $log = document.getElementById("mbb-log");
+ <script>
+  // ====== DOM 참조 ======
+  const $launcher = document.getElementById("mbb-launcher");
+  const $modal    = document.getElementById("mbb-modal");
+  const $close    = document.getElementById("mbb-close");
+  const $form     = document.getElementById("mbb-form");
+  const $input    = document.getElementById("mbb-input");
+  const $log      = document.getElementById("mbb-log");
+  const $send     = document.getElementById("mbb-send");
 
-    $launcher.onclick = () => {
-      $modal.style.display = $modal.style.display === "none" ? "block" : "none";
-    };
+  // ====== 이벤트 ======
+  $launcher?.addEventListener("click", () => { $modal.style.display = "block"; $input.focus(); });
+  $close?.addEventListener("click", () => { $modal.style.display = "none"; });
 
-    $form.onsubmit = async (e) => {
-      e.preventDefault();
-      const text = $input.value.trim();
-      if (!text) return;
-      appendUser(text);
-      $input.value = "";
-      try {
-        const r = await fetch("/api/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text })
-        });
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || r.statusText);
-        appendAgent(data?.answer || "(응답 없음)");
-      } catch (err) {
-        appendAgent("⚠️ 오류: " + (err?.message || err));
+  $form?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const text = ($input.value || "").trim();
+    if (!text) return;
+
+    appendUser(text);
+    $input.value = "";
+    setSending(true);
+
+    // ① “생각중 + 단계 텍스트” 표시
+    const thinking = appendThinkingRow();
+
+    try {
+      // 너의 ask API 경로/페이로드(변경 가능)
+      const r = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        appendAgent("⚠️ 오류: " + (data?.error || `HTTP ${r.status}`));
+      } else {
+        // ③ [1] → <sup>[1]</sup> 변환 후 출력
+        const html = toSuperscriptCitations(data?.answer || "(응답 없음)");
+        appendAgentHTML(html);
       }
-    };
+    } catch (err) {
+      appendAgent("⚠️ 네트워크 오류: " + (err?.message || err));
+    } finally {
+      // ② 단계 표시 종료
+      clearThinking(thinking);
+      setSending(false);
+    }
+  });
 
-    function appendUser(t) {
-      $log.innerHTML += `<div><b>나</b>: ${escapeHtml(t)}</div>`;
-      $log.scrollTop = $log.scrollHeight;
-    }
-    function appendAgent(t) {
-      $log.innerHTML += `<div style="margin-top:8px"><b>Agent</b>:</div><div style="white-space:pre-wrap">${t}</div>`;
-      $log.scrollTop = $log.scrollHeight;
-    }
-    function escapeHtml(s){return s.replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));}
-  </script>
+  // ====== 헬퍼들 ======
+  function setSending(s) {
+    if (!$send) return;
+    $send.disabled = s;
+    $send.textContent = s ? "전송중..." : "보내기";
+  }
+
+  function appendUser(t) {
+    $log.insertAdjacentHTML("beforeend",
+      `<div><b>나</b>:</div>
+       <div class="bubble">${escapeHtml(t)}</div>`);
+    $log.scrollTop = $log.scrollHeight;
+  }
+
+  function appendAgent(t) {
+    $log.insertAdjacentHTML("beforeend",
+      `<div style="margin-top:10px"><b>Agent</b>:</div>
+       <div class="bubble">${escapeHtml(t)}</div>`);
+    $log.scrollTop = $log.scrollHeight;
+  }
+
+  function appendAgentHTML(html) {
+    $log.insertAdjacentHTML("beforeend",
+      `<div style="margin-top:10px"><b>Agent</b>:</div>
+       <div class="bubble">${html}</div>`);
+    $log.scrollTop = $log.scrollHeight;
+  }
+
+  // ====== (핵심) “생각중… + 단계 텍스트” ======
+  // - 진짜 스트리밍이 없으므로, 자연스러운 '단계 전환'을 모의로 보여줌
+  // - 단계 문구는 마음대로 바꿔도 됨
+  function appendThinkingRow() {
+    const id = "think-" + Date.now();
+    const stages = [
+      "질문 의도 파악 중",
+      "관련 문서 검색 중",
+      "핵심 내용 선별 중",
+      "요약 및 각주 구성 중"
+    ];
+
+    const items = stages.map((s, i) =>
+      `<li class="${i === 0 ? "current" : ""}" data-i="${i}">
+         <span class="dot"></span>${s}
+       </li>`).join("");
+
+    $log.insertAdjacentHTML("beforeend", `
+      <div id="${id}" style="margin-top:8px">
+        <div class="thinking">생각중<span class="dots"></span></div>
+        <div class="stage-box">
+          <ul class="stage-list" id="${id}-list">
+            ${items}
+          </ul>
+        </div>
+      </div>
+    `);
+    $log.scrollTop = $log.scrollHeight;
+
+    const $list = document.getElementById(`${id}-list`);
+    let idx = 0;
+
+    // 0.9초마다 다음 단계로 이동 (실제 응답보다 길어지지 않도록 3까지)
+    const timer = setInterval(() => {
+      const lis = Array.from($list.querySelectorAll("li"));
+      if (idx < lis.length) {
+        lis[idx].classList.remove("current");
+        lis[idx].classList.add("done");
+        idx++;
+        if (idx < lis.length) lis[idx].classList.add("current");
+      } else {
+        // 4단계 이후엔 멈춤 (응답이 오면 clearThinking로 제거됨)
+        clearInterval(timer);
+      }
+    }, 900);
+
+    return { id, timer };
+  }
+
+  function clearThinking(obj) {
+    if (!obj) return;
+    clearInterval(obj.timer);
+    const el = document.getElementById(obj.id);
+    if (el) el.remove();
+  }
+
+  // ====== [1] → <sup>[1]</sup> 변환 ======
+  function toSuperscriptCitations(md) {
+    // 링크 [text](url)은 건드리지 않고, 순수 [숫자]만 <sup>로
+    const safe = md.replace(/(?<!\])\[(\d+)\](?!\()/g, (_m, g1) => `<sup>[${g1}]</sup>`);
+    return safe
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/&lt;sup&gt;\[(\d+)\]&lt;\/sup&gt;/g, '<sup>[$1]</sup>')
+      .replace(/\n/g, '<br/>');
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;' }[c]));
+  }
+</script>
+
 </body>
 </html>
+
